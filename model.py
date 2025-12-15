@@ -22,9 +22,8 @@ class ProjectInformation:
     project_code: str
     has_other_supervisors: bool
     supervisor_list: list[dict]
-    render_engine: str
     project_type: str
-    project_fps: int
+    project_fps: str
 
 
 @dataclass
@@ -33,8 +32,6 @@ class UserInformation:
 
     sg_username: str
     sg_user_id: str
-    student_year: int
-    student_graduation_year: int
 
 
 class ValidationError(Exception):
@@ -57,9 +54,8 @@ class ProjectCreatorModel:
             project_code="",
             has_other_supervisors=False,
             supervisor_list=[],
-            render_engine="All",
             project_type="Fiction",
-            project_fps=25,
+            project_fps="24.00",
         )
 
     def connect_to_shotgrid(
@@ -100,12 +96,24 @@ class ProjectCreatorModel:
         projects = self.shotgrid_connection.find("Project", [], ["name"])
         self.projects = [project["name"] for project in projects]
 
-        project_codes = self.shotgrid_connection.find(
-            "Project", [], ["sg_projectcode"]
-        )
+        project_codes = self.shotgrid_connection.find("Project", [], ["sg_short_name"])
         self.project_codes = [
-            project_code["sg_projectcode"] for project_code in project_codes
+            project_code["sg_short_name"] for project_code in project_codes
         ]
+
+        self.project_types = self.shotgrid_connection.schema_field_read(
+            "Project", "sg_type"
+        )["sg_type"]["properties"]["valid_values"]["value"]
+        self.project_types = [
+            ptype for ptype in self.project_types if "template" not in ptype.lower()
+        ]
+
+        self.fps_values = sorted(
+            self.shotgrid_connection.schema_field_read("Project", "sg_frame_rate")[
+                "sg_frame_rate"
+            ]["properties"]["valid_values"]["value"],
+            key=float,
+        )
 
     def get_shotgrid_user_from_computer_username(self) -> bool:
         """Checks if the username of the computer matches an account name
@@ -117,7 +125,7 @@ class ProjectCreatorModel:
         username = os.getlogin()
         return self.get_shotgrid_user(username)
 
-    def get_shotgrid_user(self, username: str) -> dict:
+    def get_shotgrid_user(self, username: str) -> dict | None:
         """Tries to find a ShotGrid user in the database. This can be based
         on either the 'name' field or 'login' field.
 
@@ -130,7 +138,6 @@ class ProjectCreatorModel:
         fields_to_retrieve = [
             "id",
             "name",
-            "sg_lichting",
             "permission_rule_set",
         ]
         name_field_search = [["name", "contains", username]]
@@ -161,54 +168,10 @@ class ProjectCreatorModel:
         shotgrid_user_name = shotgrid_user.get("name")
         shotgrid_user_id = shotgrid_user.get("id")
 
-        student_graduation_year = self.get_student_graduation_year(
-            shotgrid_user
-        )
-        student_year = self.get_current_student_year(student_graduation_year)
-
         self.user_information = UserInformation(
             shotgrid_user_name,
             shotgrid_user_id,
-            student_year,
-            student_graduation_year,
         )
-
-    @staticmethod
-    def get_student_graduation_year(shotgrid_user: dict) -> int:
-        """Gets the graduation year of the student. Needed for calculating which
-        year they're currently in.
-
-        Args:
-            shotgrid_user: ShotGrid user to get graduation year for
-
-        Returns:
-            Year in which student graduates.
-        """
-        graduation_year_string = shotgrid_user.get("sg_lichting")
-        return int(graduation_year_string[1:])
-
-    @staticmethod
-    def get_current_student_year(graduation_year: int) -> int:
-        """Gets the year the student is in. This will be 4th, 3rd or 2nd year.
-        This is necessary because each year has it's own storage server.
-
-        Args:
-            graduation_year: The year in which the student will graduate.
-
-        Returns:
-            The schoolyear the student is currently in.
-        """
-        current_time = datetime.datetime.now()
-        corrected_time = current_time + datetime.timedelta(days=120)
-        current_year = int(corrected_time.strftime("%Y"))
-        to_graduation_year = graduation_year - current_year
-
-        student_year = 4 - to_graduation_year
-
-        if student_year > 4:
-            student_year = 4
-
-        return student_year
 
     def validate_project_name(self, project_name: str) -> None:
         """Validates the project name.
@@ -223,9 +186,7 @@ class ProjectCreatorModel:
             raise ValidationError(validation_message)
 
         legal_characters = "^[a-z_]*$"
-        contains_only_legal_characters = re.match(
-            legal_characters, project_name
-        )
+        contains_only_legal_characters = re.match(legal_characters, project_name)
 
         if not contains_only_legal_characters:
             validation_message = (
@@ -254,13 +215,9 @@ class ProjectCreatorModel:
         else:
             legal_characters = "^[A-Za-z]+$"
             code_length = 3
-            legal_character_warning = (
-                "Three-letter code should only use letters a-z."
-            )
+            legal_character_warning = "Three-letter code should only use letters a-z."
 
-        contains_only_legal_characters = re.match(
-            legal_characters, project_code
-        )
+        contains_only_legal_characters = re.match(legal_characters, project_code)
 
         if not contains_only_legal_characters:
             raise ValidationError(legal_character_warning)
@@ -293,9 +250,7 @@ class ProjectCreatorModel:
         supervisor_user_object = self.get_shotgrid_user(supervisor_name)
 
         if not supervisor_user_object:
-            validation_message = (
-                "Could not find supervisor name in ShotGrid database."
-            )
+            validation_message = "Could not find supervisor name in ShotGrid database."
             raise ValidationError(validation_message)
 
         if supervisor_user_object in self.project_information.supervisor_list:
@@ -313,24 +268,11 @@ class ProjectCreatorModel:
         """
         supervisor_user_object = self.get_shotgrid_user(supervisor_name)
 
-        if (
-            supervisor_user_object
-            not in self.project_information.supervisor_list
-        ):
-            validation_message = (
-                "Can't remove because supervisor isn't on the list."
-            )
+        if supervisor_user_object not in self.project_information.supervisor_list:
+            validation_message = "Can't remove because supervisor isn't on the list."
             raise ValidationError(validation_message)
 
         self.project_information.supervisor_list.remove(supervisor_user_object)
-
-    def set_render_engine(self, render_engine: str) -> None:
-        """Sets the render engine on the dataclass.
-
-        Args:
-            render_engine: Render engine to use.
-        """
-        self.project_information.render_engine = render_engine
 
     def set_project_type(self, project_type: str) -> None:
         """Sets the project type on the dataclass.
@@ -340,11 +282,11 @@ class ProjectCreatorModel:
         """
         self.project_information.project_type = project_type
 
-    def set_fps(self, fps: int) -> None:
+    def set_fps(self, fps: str) -> None:
         """Sets the project FPS
 
         Args:
-            fps: FPS to set. Most likely 25, as school requires that.
+            fps: FPS to set.
         """
         self.project_information.project_fps = fps
 
@@ -359,9 +301,7 @@ class ProjectCreatorModel:
             validation_message = "You haven't yet added any supervisors."
             raise ValidationError(validation_message)
 
-    def get_formatted_supervisors_list(
-        self, supervisors_list: list
-    ) -> list[dict]:
+    def get_formatted_supervisors_list(self, supervisors_list: list) -> list[dict]:
         """Reworks the supervisor list into the list format that ShotGrid expects.
         Also adds the correct permissions to the supervisors on the list.
 
@@ -391,9 +331,7 @@ class ProjectCreatorModel:
         Args:
             shotgrid_user: ShotGrid user object to update
         """
-        user_permission_group = shotgrid_user.get("permission_rule_set").get(
-            "name"
-        )
+        user_permission_group = shotgrid_user.get("permission_rule_set").get("name")
 
         if user_permission_group == "Artist":
             new_permission_configuration = {
@@ -441,38 +379,37 @@ class ProjectCreatorModel:
             self.project_information.supervisor_list
         )
 
+        tank_name = f"{self.project_information.project_code.strip()}_{self.project_information.project_name.strip()}".replace(
+            " ", "_"
+        )
         project_data = {
             "name": self.project_information.project_name,
-            "tank_name": self.project_information.project_name,
-            "sg_projectcode": self.project_information.project_code,
+            "tank_name": tank_name,
+            "code": self.project_information.project_code,
+            "sg_short_name": self.project_information.project_code,
             "users": formatted_supervisors_list,
-            "sg_supervisors": formatted_supervisors_list,
-            "sg_render_engine": self.project_information.render_engine,
             "sg_type": self.project_information.project_type,
-            "sg_lichting": f"L{self.user_information.student_graduation_year}",
-            "sg_fps": self.project_information.project_fps,
+            "sg_frame_rate": self.project_information.project_fps,
             "sg_status": "Active",
+            # TODO select template
         }
 
-        created_project = self.shotgrid_connection.create(
-            "Project", project_data
-        )
+        created_project = self.shotgrid_connection.create("Project", project_data)
         project_id = created_project.get("id")
 
         pipeline_configuration_data = {
             "code": "Primary",
-            "descriptor": self.get_pipeline_configuration_string(
-                self.user_information.student_year
-            ),
+            "descriptor": self.get_pipeline_configuration_string(1),
             "plugin_ids": "basic.*",
             "project": {"id": project_id, "type": "Project"},
-            "sg_lichting": f"s{self.user_information.student_year}",
         }
         self.shotgrid_connection.create(
             "PipelineConfiguration", pipeline_configuration_data
         )
 
-        return f"https://nfa.shotgunstudio.com/page/project_overview?project_id={project_id}"
+        # TODO add production logs
+
+        return f"{self.controller._sg_url}page/project_overview?project_id={project_id}"
 
 
 class ShotGridConnectionThread(QtCore.QThread):

@@ -66,7 +66,10 @@ class ProjectCreatorController:
             self.model.set_user_information(shotgrid_user)
             self.view.layout.addWidget(
                 self.view.get_main_widget(
-                    shotgrid_user.get("name"), self.model.usernames
+                    shotgrid_user.get("name"),
+                    self.model.usernames,
+                    self.model.project_types,
+                    self.model.fps_values,
                 )
             )
             self.connect_view_functions()
@@ -104,32 +107,12 @@ class ProjectCreatorController:
     def connect_view_functions(self) -> None:
         """Connects all our view buttons and text changes to corresponding
         functions in this controller."""
-        self.view.project_name_lineedit.textChanged.connect(
-            self.validate_project_name
-        )
-        self.view.production_code_yes_button.clicked.connect(
-            self.set_production_code_yes
-        )
-        self.view.production_code_no_button.clicked.connect(
-            self.set_production_code_no
-        )
-        self.view.project_code_lineedit.textChanged.connect(
-            self.validate_project_code
-        )
+        self.view.project_name_lineedit.textChanged.connect(self.validate_project_name)
+        self.view.project_code_lineedit.textChanged.connect(self.validate_project_code)
         self.view.supervisor_add_button.clicked.connect(self.add_supervisor)
-        self.view.supervisor_remove_button.clicked.connect(
-            self.remove_supervisor
-        )
-        self.view.render_engine_list.currentTextChanged.connect(
-            self.set_render_engine
-        )
-        self.view.project_type_fiction_button.clicked.connect(
-            self.set_project_type_fiction
-        )
-        self.view.project_type_documentary_button.clicked.connect(
-            self.set_project_type_documentary
-        )
-        self.view.fps_spinbox.valueChanged.connect(self.set_fps)
+        self.view.supervisor_remove_button.clicked.connect(self.remove_supervisor)
+        self.view.project_type.currentTextChanged.connect(self.set_project_type)
+        self.view.fps_box.currentTextChanged.connect(self.set_fps)
         self.view.create_project_button.clicked.connect(self.create_project)
 
     def validate_project_name(self, project_name: str) -> None:
@@ -155,37 +138,13 @@ class ProjectCreatorController:
 
         project_name_validation_text.show()
 
-    def set_production_code_yes(self) -> None:
-        """Switches production code to yes and informs the model."""
-        self.view.production_code_yes_button.setChecked(True)
-        self.view.production_code_no_button.setChecked(False)
-        self.model.set_has_production_code(True)
-        self.view.production_code_enter_text.setText(
-            "Enter the production code below."
-        )
-
-        self.validate_project_code(self.view.project_code_lineedit.text())
-
-    def set_production_code_no(self) -> None:
-        """Switches production code to no and informs the model."""
-        self.view.production_code_no_button.setChecked(True)
-        self.view.production_code_yes_button.setChecked(False)
-        self.model.set_has_production_code(False)
-        self.view.production_code_enter_text.setText(
-            "Come up with a three-letter code for your project. (e.g. ABC)"
-        )
-
-        self.validate_project_code(self.view.project_code_lineedit.text())
-
     def validate_project_code(self, project_code: str) -> None:
         """Validates project name and updates view.
 
         Args:
             project_code: String project code, either P#### or ABC.
         """
-        production_code_validation_text = (
-            self.view.production_code_validation_text
-        )
+        production_code_validation_text = self.view.production_code_validation_text
 
         try:
             self.model.validate_project_code(project_code)
@@ -207,9 +166,7 @@ class ProjectCreatorController:
         supervisors_validation_text = self.view.supervisors_validation_text
 
         try:
-            username = self.model.add_supervisor(
-                self.view.supervisors_lineedit.text()
-            )
+            username = self.model.add_supervisor(self.view.supervisors_lineedit.text())
 
             supervisors_validation_text.setText("Added supervisor to list!")
             supervisors_validation_text.setStyleSheet(
@@ -233,9 +190,7 @@ class ProjectCreatorController:
         supervisors_validation_text = self.view.supervisors_validation_text
 
         try:
-            self.model.remove_supervisor(
-                self.view.supervisors_list.currentText()
-            )
+            self.model.remove_supervisor(self.view.supervisors_list.currentText())
 
             self.view.supervisors_list.removeItem(
                 self.view.supervisors_list.findText(
@@ -243,9 +198,7 @@ class ProjectCreatorController:
                 )
             )
 
-            supervisors_validation_text.setText(
-                "Removed supervisor from list!"
-            )
+            supervisors_validation_text.setText("Removed supervisor from list!")
             supervisors_validation_text.setStyleSheet(
                 "color: '#8BFF3E'; font-size: 12px;"
             )
@@ -258,28 +211,16 @@ class ProjectCreatorController:
 
         supervisors_validation_text.show()
 
-    def set_render_engine(self, render_engine: str) -> None:
-        """Informs the model of the new render engine choice."""
-        self.model.set_render_engine(render_engine)
-
-    def set_project_type_fiction(self) -> None:
+    def set_project_type(self) -> None:
         """Sets the project type to fiction and informs the model."""
-        self.view.project_type_fiction_button.setChecked(True)
-        self.view.project_type_documentary_button.setChecked(False)
-        self.model.set_project_type("Fiction")
+        self.model.set_project_type(self.view.project_type.currentText())
 
-    def set_project_type_documentary(self) -> None:
-        """Sets the project type to documentary and informs the model."""
-        self.view.project_type_documentary_button.setChecked(True)
-        self.view.project_type_fiction_button.setChecked(False)
-        self.model.set_project_type("Documentary")
-
-    def set_fps(self, fps: int) -> None:
+    def set_fps(self) -> None:
         """Informs the model of the new FPS.
 
         Args:
             fps: New project FPS"""
-        self.model.set_fps(fps)
+        self.model.set_fps(self.view.fps_box.currentText())
 
     def create_project(self) -> None:
         """Validates the project, then starts project creation on a separate thread."""
