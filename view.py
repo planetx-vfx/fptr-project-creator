@@ -33,7 +33,7 @@ class ProjectCreatorView(QtWidgets.QWidget):
         window_icon = QtGui.QIcon(icon_path)
         self.setWindowIcon(window_icon)
 
-        self.setWindowTitle("NFA ShotGrid Project Creator")
+        self.setWindowTitle("PLX ShotGrid Project Creator")
         self.resize(500, 800)
 
         self.layout = QtWidgets.QVBoxLayout(self)
@@ -56,15 +56,13 @@ class ProjectCreatorView(QtWidgets.QWidget):
 
         top_layout = QtWidgets.QHBoxLayout()
 
-        nfa_logo = QtGui.QPixmap(
-            str(SCRIPT_LOCATION / "ui_files" / "nfa_logo.png")
+        logo = QtGui.QPixmap(
+            str(SCRIPT_LOCATION / "ui_files" / "plx_main_logo_white_256px.png")
         ).scaledToHeight(35, QtCore.Qt.SmoothTransformation)
         nfa_logo_label = QtWidgets.QLabel()
-        nfa_logo_label.setPixmap(nfa_logo)
+        nfa_logo_label.setPixmap(logo)
 
-        shotgrid_creator_label = QtWidgets.QLabel(
-            "NFA ShotGrid<br>Project Creator"
-        )
+        shotgrid_creator_label = QtWidgets.QLabel("PLX ShotGrid<br>Project Creator")
         shotgrid_creator_label.setAlignment(
             QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter
         )
@@ -97,7 +95,7 @@ class ProjectCreatorView(QtWidgets.QWidget):
         self.start_widget.setLayout(start_widget_layout)
 
         start_text_1 = QtWidgets.QLabel(
-            "Welcome to the NFA ShotGrid project creator!"
+            "Welcome to the Planet X ShotGrid project creator!"
         )
         start_text_1.setAlignment(QtCore.Qt.AlignCenter)
         start_text_1.setWordWrap(True)

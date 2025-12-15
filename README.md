@@ -1,4 +1,4 @@
-# The NFA ShotGrid Project Creator
+# The Planet X ShotGrid Project Creator
 This standalone application is a GUI rewrite of our [ShotGrid Project Creation script](https://github.com/nfa-vfxim/nfa-shotgrid-project-creation). It is a completely custom tool for properly creating ShotGrid projects so they are correctly configured for use in our ShotGrid pipeline. It was designed to simplify several settings, like:
 - Setting the right [ShotGrid configuration](https://github.com/nfa-vfxim/nfa-shotgun-configuration) branch based on the year a student is in.
 - Validating project names and codes so no duplicates are created.
