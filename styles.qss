@@ -1,5 +1,4 @@
-
-QWidget{
+QWidget {
     background-color: #444444;
 }
 
@@ -8,7 +7,10 @@ QLabel {
     font-size: 12pt;
 }
 
-QLineEdit{
+QLineEdit,
+QTextEdit,
+QComboBox,
+QSpinBox {
     color: white;
     background-color: #2A2A2A;
     border: 6px solid #2A2A2A;
@@ -35,18 +37,6 @@ QPushButton:checked {
     border-radius: 6px;
 }
 
-QComboBox{
+QAbstractItemView {
     color: white;
-    background-color: #2A2A2A;
-    border: 6px solid #2A2A2A;
-    border-radius: 6px;
-}
-
-QAbstractItemView { color: white; }
-
-QSpinBox{
-    color: white;
-    background-color: #2A2A2A;
-    border: 6px solid #2A2A2A;
-    border-radius: 6px;
 }
