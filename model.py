@@ -46,8 +46,10 @@ class ProjectCreatorModel:
 
     This model handles all validation and ShotGrid interfacing."""
 
-    def __init__(self) -> None:
+    def __init__(self, controller) -> None:
         """Initializes this class and stores the project dataclass."""
+        self.controller = controller
+
         self.project_information = ProjectInformation(
             username="",
             project_name="",
@@ -87,9 +89,9 @@ class ProjectCreatorModel:
         speed up the program.
         """
         self.shotgrid_connection = shotgun.Shotgun(
-            "https://nfa.shotgunstudio.com",
-            script_name="project_creation_V2",
-            api_key=os.environ["SHOTGRID_API_KEY"],
+            self.controller._sg_url,
+            script_name=self.controller._script_name,
+            api_key=self.controller._api_key,
         )
 
         users = self.shotgrid_connection.find("HumanUser", [], ["name"])

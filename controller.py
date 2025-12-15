@@ -12,13 +12,21 @@ class ProjectCreatorController:
     This controller handles all interactions between the view and the model.
     """
 
-    def __init__(self):
+    _sg_url: str
+    _script_name: str
+    _api_key: str
+
+    def __init__(self, sg_url: str, script_name: str, api_key: str):
         """Initializes the controller class and creates the view and model."""
+        self._sg_url = sg_url
+        self._script_name = script_name
+        self._api_key = api_key
+
         self.view = ProjectCreatorView()
         self.view.show()
         self.view.start_button.clicked.connect(self.connect_to_shotgrid)
 
-        self.model = ProjectCreatorModel()
+        self.model = ProjectCreatorModel(self)
 
     def connect_to_shotgrid(self) -> None:
         """Starts the ShotGrid model connection."""
@@ -72,9 +80,7 @@ class ProjectCreatorController:
     def validate_username(self) -> None:
         """Checks if user submitted username is in ShotGrid. Moves on to next
         step if username exists."""
-        shotgrid_user = self.model.get_shotgrid_user(
-            self.view.username_lineedit.text()
-        )
+        shotgrid_user = self.model.get_shotgrid_user(self.view.username_lineedit.text())
 
         if not shotgrid_user:
             self.view.username_validation_text.setStyleSheet(
